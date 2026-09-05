@@ -112,6 +112,21 @@ class TestOrchestrator:
                 logger.info(f"Gemini enrichment notice: {e}. Utilizing synthesized rules engine analysis.")
 
             # Fallback overall health computation if not provided by Gemini
+            if ai_issues:
+                for idx, ai_issue in enumerate(ai_issues):
+                    if not ai_issue.get("screenshot_path"):
+                        matched = next(
+                            (p for p in pre_classified if p.get("screenshot_path") and (
+                                (p.get("element_selector") and p.get("element_selector") == ai_issue.get("element_selector")) or
+                                (p.get("page_url") == ai_issue.get("page_url") and p.get("category") == ai_issue.get("category"))
+                            )),
+                            None
+                        )
+                        if not matched and idx < len(pre_classified):
+                            matched = pre_classified[idx] if pre_classified[idx].get("screenshot_path") else None
+                        if matched and matched.get("screenshot_path"):
+                            ai_issue["screenshot_path"] = matched["screenshot_path"]
+
             all_issues = ai_issues if ai_issues else pre_classified
             crit_count = sum(1 for i in all_issues if i.get("severity") == "critical")
             high_count = sum(1 for i in all_issues if i.get("severity") == "high")
@@ -223,6 +238,7 @@ class TestOrchestrator:
                     recommendation=issue_data.get("recommendation"),
                     page_url=issue_data.get("page_url"),
                     element_selector=issue_data.get("element_selector"),
+                    screenshot_path=issue_data.get("screenshot_path"),
                     raw_data=issue_data.get("raw_data"),
                 )
                 db.add(issue)

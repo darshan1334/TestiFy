@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import time
+import uuid
 from typing import Callable, Optional, Any
 from urllib.parse import urlparse, urljoin, urldefrag
 
@@ -141,6 +142,21 @@ class PlaywrightCrawler:
                     result.pages_visited.append(url)
                     result.console_errors.extend(console_msgs)
 
+                    async def capture_bug_screenshot(prefix: str = "bug") -> Optional[str]:
+                        try:
+                            ss_name = f"{session_id}_{prefix}_{uuid.uuid4().hex[:8]}.png"
+                            ss_path = os.path.join(self._screenshot_dir, ss_name)
+                            await page.screenshot(path=ss_path)
+                            result.screenshots.append(ss_path)
+                            return ss_name
+                        except Exception as ss_e:
+                            logger.debug(f"Bug screenshot notice: {ss_e}")
+                            return None
+
+                    for c_err in console_msgs:
+                        if c_err.get("type") == "error":
+                            c_err["screenshot_path"] = await capture_bug_screenshot("js")
+
                     if response:
                         result.page_titles[url] = await page.title()
 
@@ -231,6 +247,7 @@ class PlaywrightCrawler:
 
                         for issue in form_issues:
                             issue["url"] = url
+                            issue["screenshot_path"] = await capture_bug_screenshot("form")
                             result.form_issues.append(issue)
                     except Exception:
                         pass
@@ -255,6 +272,7 @@ class PlaywrightCrawler:
                         }""")
                         for violation in axe_results:
                             violation["url"] = url
+                            violation["screenshot_path"] = await capture_bug_screenshot("a11y")
                             result.accessibility_violations.append(violation)
                     except Exception as e:
                         logger.debug(f"axe-core notice on {url}: {e}")

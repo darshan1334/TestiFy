@@ -405,6 +405,7 @@ async def get_session(session_id: str, db: AsyncSession = Depends(get_db)):
             "recommendation": i.recommendation,
             "page_url": i.page_url,
             "element_selector": i.element_selector,
+            "screenshot_path": i.screenshot_path,
         }
         for i in session.issues
     ]

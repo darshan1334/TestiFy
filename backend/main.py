@@ -77,6 +77,7 @@ app.include_router(security_router.router)
 # ── Static files ──────────────────────────────────────────────────────────────
 os.makedirs(settings.screenshot_dir, exist_ok=True)
 app.mount("/screenshots", StaticFiles(directory=settings.screenshot_dir), name="screenshots")
+app.mount("/api/screenshots", StaticFiles(directory=settings.screenshot_dir), name="api_screenshots")
 
 
 # ── Health Check ──────────────────────────────────────────────────────────────

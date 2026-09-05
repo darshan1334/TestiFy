@@ -29,10 +29,13 @@ export default function TestResultsPage() {
 
   // If no sessionId: list sessions to pick from
   useEffect(() => {
+    setLoading(true)
+    setError(null)
     if (sessionId) {
+      setSession(null)
       sessionsApi.get(sessionId)
         .then(setSession)
-        .catch(e => setError(e?.response?.data?.detail || 'Failed to load'))
+        .catch(e => setError(e?.response?.data?.detail || 'Test result not found'))
         .finally(() => setLoading(false))
     } else {
       sessionsApi.list()
@@ -100,14 +103,16 @@ export default function TestResultsPage() {
     )
   }
 
-  if (loading) return (
+  const isSessionLoading = loading || (Boolean(sessionId) && (!session || session.id !== sessionId))
+
+  if (isSessionLoading && !error) return (
     <div className="empty-state"><div className="skeleton" style={{ width: 200, height: 20, margin: '0 auto' }} /></div>
   )
-  if (error) return (
+  if (error || (sessionId && !session)) return (
     <div className="empty-state">
       <XCircle size={44} className="empty-state-icon" style={{ opacity: 0.5, color: 'var(--critical)' }} />
-      <h3>Error</h3>
-      <p>{error}</p>
+      <h3>Test result not found</h3>
+      <p>{error || 'Test result not found'}</p>
       <Link to="/results" style={{ color: '#a78bfa', marginTop: '1rem', display: 'inline-block' }}>← Back to Sessions</Link>
     </div>
   )
@@ -126,8 +131,8 @@ export default function TestResultsPage() {
               <ArrowLeft size={13} /> Sessions
             </Link>
           </div>
-          <h1 className="page-title" style={{ fontSize: '1.1rem' }}>{session.url}</h1>
-          <p className="page-subtitle">{issues.length} issues · {session.pages_crawled} pages · {new Date(session.created_at).toLocaleString()}</p>
+          <h1 className="page-title" style={{ fontSize: '1.1rem' }}>{session?.url}</h1>
+          <p className="page-subtitle">{issues.length} issues · {session?.pages_crawled ?? 0} pages · {session?.created_at ? new Date(session.created_at).toLocaleString() : ''}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <Link to={`/bugs/${sessionId}`} className="btn-secondary" style={{ textDecoration: 'none' }}>

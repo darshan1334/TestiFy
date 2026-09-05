@@ -103,17 +103,43 @@ function BugCard({ bug, index }) {
             </Section>
           )}
 
-          {/* Screenshot placeholder */}
+          {/* Screenshot placeholder or image */}
           <Section icon={<Image size={13} />} title="Screenshot">
-            <div style={{
-              height: 80, borderRadius: 8,
-              background: 'repeating-linear-gradient(45deg, rgba(99,102,241,0.04) 0, rgba(99,102,241,0.04) 10px, transparent 10px, transparent 20px)',
-              border: '1px dashed var(--border)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--text-muted)', fontSize: '0.75rem', gap: '0.4rem',
-            }}>
-              <Image size={15} /> Screenshot captured during test run
-            </div>
+            {bug.screenshot_path ? (
+              <div style={{ marginTop: '0.4rem', marginBottom: '0.4rem' }}>
+                <a
+                  href={bug.screenshot_path.startsWith('http') || bug.screenshot_path.startsWith('/') ? bug.screenshot_path : `/api/screenshots/${bug.screenshot_path}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'block' }}
+                >
+                  <img
+                    src={bug.screenshot_path.startsWith('http') || bug.screenshot_path.startsWith('/') ? bug.screenshot_path : `/api/screenshots/${bug.screenshot_path}`}
+                    alt="Bug Screenshot"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: 360,
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                      display: 'block',
+                      objectFit: 'contain',
+                      background: 'rgba(0,0,0,0.2)',
+                    }}
+                    onError={(e) => { e.currentTarget.parentElement.style.display = 'none' }}
+                  />
+                </a>
+              </div>
+            ) : (
+              <div style={{
+                height: 80, borderRadius: 8,
+                background: 'repeating-linear-gradient(45deg, rgba(99,102,241,0.04) 0, rgba(99,102,241,0.04) 10px, transparent 10px, transparent 20px)',
+                border: '1px dashed var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--text-muted)', fontSize: '0.75rem', gap: '0.4rem',
+              }}>
+                <Image size={15} /> Screenshot captured during test run
+              </div>
+            )}
           </Section>
 
           {/* AI Analysis */}
@@ -158,10 +184,13 @@ export default function BugsPage() {
   const [uiLoading,   setUiLoading]   = useState(false)
 
   useEffect(() => {
+    setLoading(true)
+    setError(null)
     if (sessionId) {
+      setSession(null)
       sessionsApi.get(sessionId)
         .then(setSession)
-        .catch(e => setError(e?.response?.data?.detail || 'Failed to load'))
+        .catch(e => setError(e?.response?.data?.detail || 'Bug results not found.'))
         .finally(() => setLoading(false))
     } else {
       sessionsApi.list()
@@ -313,16 +342,19 @@ export default function BugsPage() {
     )
   }
 
-  if (loading) return <div className="empty-state"><p>Loading bugs…</p></div>
-  if (error) return (
+  const isSessionLoading = loading || (Boolean(sessionId) && (!session || session.id !== sessionId))
+
+  if (isSessionLoading && !error) return <div className="empty-state"><p>Loading bugs…</p></div>
+  if (error || (sessionId && !session)) return (
     <div className="empty-state">
       <XCircle size={44} className="empty-state-icon" style={{ color: 'var(--critical)', opacity: 0.5 }} />
-      <h3>Error</h3><p>{error}</p>
+      <h3>Bug results not found.</h3>
+      <p>{error || 'Bug results not found.'}</p>
       <Link to="/bugs" style={{ color: '#a78bfa', marginTop: '1rem', display: 'inline-block' }}>← Back</Link>
     </div>
   )
 
-  const total = session.issues?.length || 0
+  const total = session?.issues?.length || 0
 
   return (
     <div className="fade-in">
@@ -333,8 +365,8 @@ export default function BugsPage() {
               <ArrowLeft size={13} /> All Sessions
             </Link>
           </div>
-          <h1 className="page-title" style={{ fontSize: '1.1rem' }}>{session.url}</h1>
-          <p className="page-subtitle">{total} bug{total !== 1 ? 's' : ''} detected · Health: {session.overall_health || '—'}</p>
+          <h1 className="page-title" style={{ fontSize: '1.1rem' }}>{session?.url}</h1>
+          <p className="page-subtitle">{total} bug{total !== 1 ? 's' : ''} detected · Health: {session?.overall_health || '—'}</p>
         </div>
         <Link to={`/results/${sessionId}`} className="btn-secondary" style={{ textDecoration: 'none' }}>
           View Results Table
@@ -361,7 +393,7 @@ export default function BugsPage() {
       {bugs.length === 0 ? (
         <div className="empty-state">
           <Bug size={44} className="empty-state-icon" />
-          <h3>{total === 0 ? 'No bugs found — excellent!' : 'No bugs match your filters'}</h3>
+          <h3>{total === 0 ? 'No bugs found for this session.' : 'No bugs match your filters'}</h3>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>

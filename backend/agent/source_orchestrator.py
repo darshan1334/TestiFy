@@ -184,6 +184,45 @@ class SourceTestOrchestrator(TestOrchestrator):
                 88,
             )
 
+            if source_type == "github":
+                await self._update("ai_analysis", "Capturing GitHub evidence screenshots...", 90)
+                try:
+                    from playwright.async_api import async_playwright
+                    import uuid
+                    from config import settings
+                    async with async_playwright() as pw:
+                        browser = await pw.chromium.launch(headless=True)
+                        context = await browser.new_context(viewport={"width": 1280, "height": 800})
+                        page = await context.new_page()
+                        
+                        for issue in all_issues:
+                            if issue.get("screenshot_path"):
+                                continue
+                            
+                            target_url = target_label
+                            page_url = issue.get("page_url", "")
+                            if page_url and page_url != target_label and page_url != project_name:
+                                parts = page_url.split(":")
+                                filepath = parts[0]
+                                line = parts[1] if len(parts) > 1 else ""
+                                target_url = f"{target_label.rstrip('/')}/blob/HEAD/{filepath}"
+                                if line:
+                                    target_url += f"#L{line}"
+                            
+                            try:
+                                await page.goto(target_url, wait_until="domcontentloaded", timeout=15000)
+                                ss_name = f"{session_id}_gh_{uuid.uuid4().hex[:8]}.png"
+                                ss_path = os.path.join(settings.screenshot_dir, ss_name)
+                                await page.screenshot(path=ss_path)
+                                issue["screenshot_path"] = ss_name
+                            except Exception as ss_e:
+                                logger.debug(f"GitHub screenshot notice: {ss_e}")
+                                
+                        await page.close()
+                        await browser.close()
+                except Exception as e:
+                    logger.debug(f"GitHub screenshot process error: {e}")
+
             # ─── Phase 4: Persist + report (shared with the URL flow) ────────
             severity_counts = await self._persist_results(
                 session_id=session_id,

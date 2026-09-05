@@ -69,6 +69,7 @@ def pre_classify_issues(result: CrawlResult) -> list[dict]:
                 "recommendation": "Review browser console for stack trace and fix the underlying JavaScript error.",
                 "page_url": err.get("url"),
                 "element_selector": None,
+                "screenshot_path": err.get("screenshot_path"),
                 "raw_data": err,
             })
 
@@ -82,6 +83,7 @@ def pre_classify_issues(result: CrawlResult) -> list[dict]:
             "recommendation": "Check the network request URL and server availability.",
             "page_url": None,
             "element_selector": None,
+            "screenshot_path": fail.get("screenshot_path"),
             "raw_data": fail,
         })
 
@@ -96,6 +98,7 @@ def pre_classify_issues(result: CrawlResult) -> list[dict]:
             "recommendation": "Fix the server-side error or update the resource URL.",
             "page_url": err.get("url"),
             "element_selector": None,
+            "screenshot_path": err.get("screenshot_path"),
             "raw_data": err,
         })
 
@@ -109,6 +112,7 @@ def pre_classify_issues(result: CrawlResult) -> list[dict]:
             "recommendation": "Update or remove the broken link.",
             "page_url": link.get("source_page"),
             "element_selector": None,
+            "screenshot_path": link.get("screenshot_path"),
             "raw_data": link,
         })
 
@@ -125,6 +129,7 @@ def pre_classify_issues(result: CrawlResult) -> list[dict]:
             "recommendation": "Fix the form element to follow accessibility and usability best practices.",
             "page_url": fi.get("url"),
             "element_selector": fi.get("selector"),
+            "screenshot_path": fi.get("screenshot_path"),
             "raw_data": fi,
         })
 
@@ -139,6 +144,7 @@ def pre_classify_issues(result: CrawlResult) -> list[dict]:
             "recommendation": f"See: {viol.get('helpUrl', 'https://dequeuniversity.com')}",
             "page_url": viol.get("url"),
             "element_selector": viol.get("nodes", [{}])[0].get("html", "") if viol.get("nodes") else None,
+            "screenshot_path": viol.get("screenshot_path"),
             "raw_data": viol,
         })
 
